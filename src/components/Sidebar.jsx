@@ -1,5 +1,3 @@
-import { useAuth } from "../context/AuthContext";
-
 const NAV_ITEMS = [
   { key: "dashboard", label: "Dashboard", icon: "grid" },
   { key: "files", label: "My Files", icon: "folder" },
@@ -35,27 +33,10 @@ const ICONS = {
         strokeLinecap="round"
       />
     </svg>
-  ),
-  logout: (
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="none">
-      <path
-        d="M7.5 17.5H4.8a1.3 1.3 0 0 1-1.3-1.3V3.8a1.3 1.3 0 0 1 1.3-1.3h2.7M13 14l4-4-4-4M17 10H7.5"
-        stroke="currentColor"
-        strokeWidth="1.6"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
   )
 };
 
 export default function Sidebar({ activeSection, onNavigate, isOpen, onClose }) {
-  const { user, signOut } = useAuth();
-
-  async function handleLogout() {
-    await signOut();
-  }
-
   return (
     <>
       {isOpen && <div className="sidebar-scrim" onClick={onClose} />}
@@ -85,18 +66,10 @@ export default function Sidebar({ activeSection, onNavigate, isOpen, onClose }) 
         </nav>
 
         <div className="sidebar-footer">
-          <div className="sidebar-user">
-            <div className="sidebar-user-avatar">
-              {user?.email?.[0]?.toUpperCase() ?? "?"}
-            </div>
-            <span className="sidebar-user-email" title={user?.email}>
-              {user?.email}
-            </span>
-          </div>
-          <button type="button" className="sidebar-nav-item" onClick={handleLogout}>
-            {ICONS.logout}
-            <span>Logout</span>
-          </button>
+          <p className="sidebar-open-note">
+            Open access &mdash; no account needed. Anyone with this link can see
+            these files.
+          </p>
         </div>
       </aside>
     </>

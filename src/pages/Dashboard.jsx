@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase, BUCKET_NAME } from "../lib/supabase";
-import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import UploadArea from "../components/UploadArea";
@@ -8,8 +7,11 @@ import FileList from "../components/FileList";
 import ErrorMessage from "../components/ErrorMessage";
 import { formatBytes, getUniqueFileName, sanitizeFileName } from "../utils/fileHelpers";
 
+// No login system: everyone who opens this site shares this one folder.
+// Anyone with the link can see, upload, and delete any file here.
+const SHARED_FOLDER = "shared";
+
 export default function Dashboard() {
-  const { user } = useAuth();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -18,22 +20,19 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("dashboard");
 
-  const userFolder = user?.id;
-
   const loadFiles = useCallback(async () => {
-    if (!userFolder) return;
     setLoading(true);
     setError("");
 
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
-      .list(userFolder, {
+      .list(SHARED_FOLDER, {
         limit: 200,
         sortBy: { column: "created_at", order: "desc" }
       });
 
     if (error) {
-      setError(`Could not load your files: ${error.message}`);
+      setError(`Could not load files: ${error.message}`);
       setLoading(false);
       return;
     }
@@ -50,7 +49,7 @@ export default function Dashboard() {
 
     setFiles(mapped);
     setLoading(false);
-  }, [userFolder]);
+  }, []);
 
   useEffect(() => {
     loadFiles();
@@ -68,7 +67,6 @@ export default function Dashboard() {
   );
 
   async function handleFilesSelected(selectedFiles) {
-    if (!userFolder) return;
     setError("");
 
     const existingNames = files.map((f) => f.name);
@@ -84,7 +82,7 @@ export default function Dashboard() {
         { id: uploadId, name: finalName, status: "uploading" }
       ]);
 
-      const path = `${userFolder}/${finalName}`;
+      const path = `${SHARED_FOLDER}/${finalName}`;
       const { error } = await supabase.storage
         .from(BUCKET_NAME)
         .upload(path, file, { cacheControl: "3600", upsert: false });
@@ -109,7 +107,7 @@ export default function Dashboard() {
 
   async function handleDownload(file) {
     setError("");
-    const path = `${userFolder}/${file.name}`;
+    const path = `${SHARED_FOLDER}/${file.name}`;
     const { data, error } = await supabase.storage.from(BUCKET_NAME).download(path);
 
     if (error) {
@@ -129,7 +127,7 @@ export default function Dashboard() {
 
   async function handleDelete(file) {
     setError("");
-    const path = `${userFolder}/${file.name}`;
+    const path = `${SHARED_FOLDER}/${file.name}`;
     const { error } = await supabase.storage.from(BUCKET_NAME).remove([path]);
 
     if (error) {
@@ -141,7 +139,7 @@ export default function Dashboard() {
   }
 
   async function getSignedUrl(file) {
-    const path = `${userFolder}/${file.name}`;
+    const path = `${SHARED_FOLDER}/${file.name}`;
     const { data, error } = await supabase.storage
       .from(BUCKET_NAME)
       .createSignedUrl(path, 60);
@@ -208,7 +206,7 @@ export default function Dashboard() {
           <ErrorMessage message={error} onDismiss={() => setError("")} />
 
           {activeSection === "settings" ? (
-            <SettingsSection user={user} totalSize={totalSize} fileCount={files.length} />
+            <SettingsSection totalSize={totalSize} fileCount={files.length} />
           ) : (
             <>
               <UploadArea
@@ -243,21 +241,9 @@ export default function Dashboard() {
   );
 }
 
-function SettingsSection({ user, totalSize, fileCount }) {
+function SettingsSection({ totalSize, fileCount }) {
   return (
     <div className="settings-section">
-      <div className="settings-card">
-        <h3>Account</h3>
-        <p className="settings-row">
-          <span>Email</span>
-          <span>{user?.email}</span>
-        </p>
-        <p className="settings-row">
-          <span>User ID</span>
-          <span className="settings-mono">{user?.id}</span>
-        </p>
-      </div>
-
       <div className="settings-card">
         <h3>Storage</h3>
         <p className="settings-row">
@@ -267,6 +253,13 @@ function SettingsSection({ user, totalSize, fileCount }) {
         <p className="settings-row">
           <span>Space used</span>
           <span>{formatBytes(totalSize)}</span>
+        </p>
+      </div>
+      <div className="settings-card">
+        <h3>Access</h3>
+        <p className="settings-row">
+          <span>Mode</span>
+          <span>Open — no login required</span>
         </p>
       </div>
     </div>

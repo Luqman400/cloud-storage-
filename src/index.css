@@ -247,6 +247,14 @@ a {
   display: none;
 }
 
+.sidebar-open-note {
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 1.5;
+  padding: 6px 8px;
+  margin: 0;
+}
+
 /* ---------- Header ---------- */
 
 .header {
